@@ -1,0 +1,145 @@
+services:
+  postgres:
+    image: postgres:15.1
+    restart: always
+    container_name: postgres
+    hostname: postgres
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: pwd
+
+  conduktor-console:
+    image: conduktor/conduktor-console:1.32.0
+    hostname: conduktor-console
+    container_name: conduktor-console
+    ports:
+      - 8080:8080
+    volumes:
+      - ./config.yml:/opt/conduktor/console-config.yaml
+      - type: bind
+        source: "./security"
+        target: /security  
+    networks:
+      default:
+    environment:
+      CDK_IN_CONF_FILE: /opt/conduktor/console-config.yaml
+      CDK_DEBUG: ${CDK_DEBUG:-false}
+      CDK_LICENSE: ${CDK_LICENSE:-}
+      CDK_MONITORING_CORTEX-URL: http://conduktor-monitoring:9009/
+      CDK_MONITORING_ALERT-MANAGER-URL: http://conduktor-monitoring:9010/
+      CDK_MONITORING_CALLBACK-URL: http://conduktor-console:8080/monitoring/api/
+      CDK_MONITORING_NOTIFICATIONS-CALLBACK-URL: http://localhost:8080
+      CDK_AUTH_LOCAL-USERS_0_EMAIL: "alice@conduktor.io"
+      CDK_AUTH_LOCAL-USERS_0_PASSWORD: "aliceP4ss!"
+      CDK_AUTH_LOCAL-USERS_1_EMAIL: "bob@conduktor.io"
+      CDK_AUTH_LOCAL-USERS_1_PASSWORD: "bobP4ss!"
+      MANAGED_KAFKA_CERT_KEY: ${MANAGED_KAFKA_CERT_KEY}
+      MANAGED_KAFKA_BOOTSTRAP_SERVERS: ${MANAGED_KAFKA_BOOTSTRAP_SERVERS}
+      MANAGED_KAFKA_CERT_CHAIN: $(MANAGED_KAFKA_CERT_CHAIN)
+      TRUSTSTORE_PASSWORD: ${TRUSTSTORE_PASSWORD}
+      KEYSTORE_PASSWORD: ${KEYSTORE_PASSWORD}
+      KEY_PASSWORD: ${KEY_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_started
+
+
+  conduktor-monitoring:
+    image: conduktor/conduktor-console-cortex:1.32.0
+    container_name: monitoring
+    environment:
+      CDK_CONSOLE-URL: "http://conduktor-console:8080"
+
+
+  conduktor-gateway-multi-tenancy:
+    image: conduktor/conduktor-gateway:3.6.1
+    hostname: conduktor-gateway-multi-tenancy
+    container_name: conduktor-gateway-multi-tenancy
+    volumes:
+      - type: bind
+        source: "./security"
+        target: /security  
+    ports:
+      - 8889:8888
+      - 6969:6969
+      - 6970:6970
+      - 6971:6971
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS:  ${MANAGED_KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_SECURITY_PROTOCOL: SSL
+      KAFKA_SSL_TRUSTSTORE_LOCATION: /security/client.truststore.jks
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: ${TRUSTSTORE_PASSWORD}
+      KAFKA_SSL_KEYSTORE_TYPE: PKCS12
+      KAFKA_SSL_KEYSTORE_LOCATION: /security/client.keystore.p12
+      KAFKA_SSL_KEYSTORE_PASSWORD: ${KEYSTORE_PASSWORD}
+      KAFKA_SSL_KEY_PASSWORD: ${KEY_PASSWORD}
+      
+
+      # Cluster ID must be different for each type of gateway otherwise they will loadbalance with each other
+      GATEWAY_CLUSTER_ID: conduktor-gateway-multi-tenancy
+      GATEWAY_LICENSE_KEY: ${CDK_LICENSE:-}
+      CDK_LICENSE: ${CDK_LICENSE:-}
+      GATEWAY_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      GATEWAY_FEATURE_FLAGS_ANALYTICS: false
+      GATEWAY_MIN_BROKERID: 1
+      LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: DEBUG
+      GATEWAY_USER_POOL_SERVICE_ACCOUNT_REQUIRED: true
+      #GATEWAY_ADVERTISED_HOST: ${GATEWAY_ADVERTISED_HOST:-conduktor-gateway-multi-tenancy}
+    healthcheck:
+      test: curl localhost:8888/health || exit 1
+      start_period: 10s
+      interval: 5s
+      retries: 25
+
+  kafka-client:
+    image: confluentinc/cp-kafka:7.8.0
+    hostname: kafka-client
+    container_name: kafka-client
+    command: sleep infinity
+    environment:
+      GATEWAY_SSL_KEY_STORE_PATH: /security/kafka.conduktor-gateway-passthrough.sni-demo.local.keystore.jks
+      GATEWAY_SSL_KEY_STORE_PASSWORD: conduktor
+      GATEWAY_SSL_KEY_PASSWORD: conduktor
+
+  conduktor-ctl:
+    image: conduktor/conduktor-ctl:v0.4.0
+    container_name: conduktor-ctl
+    entrypoint: sleep infinity # override entry point to keep container up
+    volumes:
+      - ./resources:/resources
+      - ./self-service:/self-service
+    environment:
+      CDK_BASE_URL: "http://conduktor-console:8080"
+      CONDUKTOR_CLI_IMAGE: "conduktor/conduktor-ctl:v0.4.0"
+      CDK_USER: "admin@demo.dev"
+      CDK_PASSWORD: "adminP4ss!"
+      CDK_API_KEY: "" # generate me from the UI for the demo, CLI also available
+  
+  vault:
+    image: hashicorp/vault
+    hostname: vault
+    container_name: vault
+    ports:
+      - "8200:8200"
+    command: [
+        "sh",
+        "-c",
+        "(while ! nc -z 127.0.0.1 8200; \
+        do \
+        sleep 1; \
+        echo 'waiting for vault service ...'; \
+        done; \
+        export VAULT_ADDR='http://0.0.0.0:8200';\
+        vault secrets enable transit; \
+        vault secrets enable -version=1 kv; \
+        vault secrets enable totp \
+        ) & vault server -dev -dev-listen-address=0.0.0.0:8200",
+      ]
+    environment:
+      VAULT_ADDR: "http://0.0.0.0:8200"
+      VAULT_DEV_ROOT_TOKEN_ID: "vault-plaintext-root-token"
+
+networks:
+  default:
+    name: integrations
