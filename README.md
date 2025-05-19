@@ -24,7 +24,7 @@ when everything is configured turn everything on
 docker compose up -d
 ```
 
-now you will need to add the gateway running to console, run the following program
+now you will need to add the gateway running to console for partber zones, run the following program
 ```
 ./add_gateway_to_console.sh
 ```
