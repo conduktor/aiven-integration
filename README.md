@@ -4,7 +4,7 @@
 
 create a .env file and put the token in there like in the below example
 ```
-MANAGED_KAFKA_BOOTSTRAP_SERVERS=bootstrap.demo.us-central1.managedkafka.cloudera-conduktor.cloud.goog:9092
+MANAGED_KAFKA_BOOTSTRAP_SERVERS=aiven_kafka_cluster:aiven_port
 CDK_LICENSE=_get_a_license_from_conduktor_
 GATEWAY_ADVERTISED_HOST=conduktor-gateway-multi-tenancy
 TRUSTSTORE_PASSWORD=***
