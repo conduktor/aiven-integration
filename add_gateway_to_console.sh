@@ -21,7 +21,7 @@ cli () {
     -e CDK_GATEWAY_BASE_URL=http://conduktor-gateway-multi-tenancy:8888 \
     -e CDK_GATEWAY_USER=admin \
     -e CDK_GATEWAY_PASSWORD=conduktor \
-    -e GATEWAY_ADMIN_TOKEN=$GATEWAYTOKEN \
+    -e GATEWAYTOKEN=$GATEWAYTOKEN \
     --network integrations \
     --volume $PWD/resources:/resources $CONDUKTOR_CLI_IMAGE "$@"
 }
@@ -41,5 +41,18 @@ cli apply -f resources/exchange/pz_admin_sa.yaml
 
 cli run generateServiceAccountToken --life-time-seconds 999999 --username admin --v-cluster passthrough | jq -r ".token"
 export GATEWAYTOKEN=$(cli run generateServiceAccountToken --life-time-seconds 999999 --username admin --v-cluster passthrough | jq -r ".token")
+
+echo $GATEWAYTOKEN > .gateway-token
+
+# generate credentials for clients
+set +v
+echo  """
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=PLAIN
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="$GATEWAYTOKEN";
+""" > security/kafka-admin.properties
+set -v
+
+echo $GATEWAYTOKEN
 
 cli apply -f resources/exchange/partner_gateway.yaml

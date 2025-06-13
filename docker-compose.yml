@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: pwd
 
   conduktor-console:
-    image: conduktor/conduktor-console:1.32.0
+    image: conduktor/conduktor-console:latest
     hostname: conduktor-console
     container_name: conduktor-console
     ports:
@@ -51,9 +51,8 @@ services:
     environment:
       CDK_CONSOLE-URL: "http://conduktor-console:8080"
 
-
   conduktor-gateway-multi-tenancy:
-    image: conduktor/conduktor-gateway:3.6.1
+    image: conduktor/conduktor-gateway:latest
     hostname: conduktor-gateway-multi-tenancy
     container_name: conduktor-gateway-multi-tenancy
     volumes:
@@ -85,7 +84,8 @@ services:
       GATEWAY_MIN_BROKERID: 1
       LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: DEBUG
       GATEWAY_USER_POOL_SERVICE_ACCOUNT_REQUIRED: true
-      #GATEWAY_ADVERTISED_HOST: ${GATEWAY_ADVERTISED_HOST:-conduktor-gateway-multi-tenancy}
+      GATEWAY_USER_POOL_SECRET_KEY: M4lGSKh7d6X66BbrRns9v/3TSsm+FufA+ZvFFM2hqo0=
+      GATEWAY_ADVERTISED_HOST: ${GATEWAY_ADVERTISED_HOST:-conduktor-gateway-multi-tenancy}
     healthcheck:
       test: curl localhost:8888/health || exit 1
       start_period: 10s
@@ -97,10 +97,11 @@ services:
     hostname: kafka-client
     container_name: kafka-client
     command: sleep infinity
-    environment:
-      GATEWAY_SSL_KEY_STORE_PATH: /security/kafka.conduktor-gateway-passthrough.sni-demo.local.keystore.jks
-      GATEWAY_SSL_KEY_STORE_PASSWORD: conduktor
-      GATEWAY_SSL_KEY_PASSWORD: conduktor
+    volumes:
+      - type: bind
+        source: "./security"
+        target: /clientConfig
+        read_only: true
 
   conduktor-ctl:
     image: conduktor/conduktor-ctl:v0.4.0
@@ -109,6 +110,7 @@ services:
     volumes:
       - ./resources:/resources
       - ./self-service:/self-service
+      - ./security:/clientConfig
     environment:
       CDK_BASE_URL: "http://conduktor-console:8080"
       CONDUKTOR_CLI_IMAGE: "conduktor/conduktor-ctl:v0.4.0"
@@ -139,6 +141,17 @@ services:
     environment:
       VAULT_ADDR: "http://0.0.0.0:8200"
       VAULT_DEV_ROOT_TOKEN_ID: "vault-plaintext-root-token"
+
+  shadowtraffic:
+    image: shadowtraffic/shadowtraffic:latest
+    container_name: shadowtraffic
+    env_file: ${HOME}/code/shadowtraffic
+    volumes:
+      - ./shadowtraffic-config.json:/home/config.json
+    command: --config /home/config.json --watch
+    profiles:
+      - shadowtraffic
+
 
 networks:
   default:

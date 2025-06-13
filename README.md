@@ -29,6 +29,18 @@ now you will need to add the gateway running to console for partner zones, run t
 ./add_gateway_to_console.sh
 ```
 
+add shadow traffic for financial data
+```
+./add_shadow_traffic.sh
+```
+
+*you will need a shadow traffic license[https://shadowtraffic.io/], put the file in the path below*
+
+`~/shadowtraffic`
+
+finally, lets encrypt that financial data!
+
+`./add_interceptors.sh`
 
 shut everything down
 ```

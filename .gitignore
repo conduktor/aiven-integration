@@ -21,3 +21,5 @@ key-context
 venv/
 .gateway-token
 .partner-zone.properties
+shadowtraffic-config.json
+kafka-admin.properties

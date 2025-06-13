@@ -10,7 +10,7 @@ spec:
   bootstrapServers: conduktor-gateway-multi-tenancy:6969
   ignoreUntrustedCertificate: false
   properties:
-    sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="${GATEWAY_ADMIN_TOKEN}";
+    sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="${GATEWAYTOKEN}";
     security.protocol: SASL_PLAINTEXT
     sasl.mechanism: PLAIN
   schemaRegistry:
