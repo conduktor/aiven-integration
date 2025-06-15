@@ -34,7 +34,7 @@ add shadow traffic for financial data
 ./add_shadow_traffic.sh
 ```
 
-*you will need a shadow traffic license[https://shadowtraffic.io/], put the file in the path below*
+*you will need a shadow traffic license[ShadowTraffic](https://shadowtraffic.io/) [Data Generated Source](https://github.com/ShadowTraffic/shadowtraffic-examples/blob/master/kafka-retail.json) , put the file in the path below*
 
 `~/shadowtraffic`
 
