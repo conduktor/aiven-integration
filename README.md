@@ -36,6 +36,8 @@ add shadow traffic for financial data
 
 *you will need a shadow traffic license[ShadowTraffic](https://shadowtraffic.io/) [Data Generated Source](https://github.com/ShadowTraffic/shadowtraffic-examples/blob/master/kafka-retail.json) , put the file in the path below*
 
+If you wish to understand how to configure field level encryption take a look at the config [here](https://github.com/conduktor/aiven-integration/blob/main/resources/interceptors/encrypt-orders.yaml)
+
 `~/shadowtraffic`
 
 finally, lets encrypt that financial data!
